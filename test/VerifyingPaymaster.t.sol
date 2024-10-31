@@ -76,7 +76,7 @@ contract VerifyingPaymasterTest is Test {
         // Replace with the expected hash value
         assertEq(
             hash,
-            0xef4702f5c2c2acbc6cfe153803fe5b2db148ed316e793e9277787a5468e6d9de
+            0xc372ec6e68f9f54f8a4aa771437e3852d647b56011383d36389782a755caa2da
         );
     }
 
@@ -113,6 +113,7 @@ contract VerifyingPaymasterTest is Test {
             MOCK_VALID_UNTIL,
             MOCK_VALID_AFTER,
             MOCK_SPONSOR_ID,
+            true,
             false,
             false,
             MOCK_TOKEN_ADDRESS,
@@ -142,6 +143,7 @@ contract VerifyingPaymasterTest is Test {
                 MOCK_VALID_UNTIL,
                 MOCK_VALID_AFTER,
                 MOCK_SPONSOR_ID,
+                true,
                 false,
                 false,
                 MOCK_TOKEN_ADDRESS,
@@ -166,6 +168,7 @@ contract VerifyingPaymasterTest is Test {
                 MOCK_VALID_UNTIL,
                 MOCK_VALID_AFTER,
                 MOCK_SPONSOR_ID,
+                true,
                 false,
                 false,
                 MOCK_TOKEN_ADDRESS,
@@ -278,6 +281,19 @@ contract VerifyingPaymasterTest is Test {
         );
     }
 
+    function test_entrypointHandleOps_reverts_ifBundlerNotOnAllowlist() public {
+        PackedUserOperation memory userOp = createUserOp();
+        addPaymasterData(userOp, false, address(0), false);
+        signUserOp(userOp);
+
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
+        ops[0] = userOp;
+
+        // Simulate an invalid bundler 
+        vm.expectRevert(); 
+        entrypoint.handleOps(ops, payable(address(12)));
+    }
+
     function test_entrypointHandleOps_failedERC20TransferInPostOp_DoesNotRevert() public {
         uint256 initialBalance = mockToken.balanceOf(MOCK_TOKEN_RECEIVER);
 
@@ -317,6 +333,7 @@ contract VerifyingPaymasterTest is Test {
 
     function addPaymasterData(PackedUserOperation memory userOp, bool anyBundler, address token, bool prepay) public view {
         VerifyingPaymaster.PaymasterData memory paymasterData = createPaymasterData();
+        paymasterData.allowAnyBundler = anyBundler;
         paymasterData.token = token;
         paymasterData.prepaymentRequired = prepay;
 
@@ -338,6 +355,7 @@ contract VerifyingPaymasterTest is Test {
                 paymasterData.validUntil,
                 paymasterData.validAfter,
                 paymasterData.sponsorUUID,
+                paymasterData.allowAnyBundler,
                 paymasterData.precheckBalance,
                 paymasterData.prepaymentRequired,
                 paymasterData.token,
@@ -366,6 +384,7 @@ contract VerifyingPaymasterTest is Test {
             MOCK_VALID_UNTIL,
             MOCK_VALID_AFTER,
             MOCK_SPONSOR_ID,
+            true,
             false,
             false,
             MOCK_TOKEN_ADDRESS,
