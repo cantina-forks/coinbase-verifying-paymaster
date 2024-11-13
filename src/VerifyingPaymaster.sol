@@ -250,9 +250,9 @@ contract VerifyingPaymaster is BasePaymaster, Ownable2Step {
         paymasterData.validUntil = uint48(bytes6(paymasterAndData[0:6]));
         paymasterData.validAfter = uint48(bytes6(paymasterAndData[6:12]));
         paymasterData.sponsorUUID = uint128(bytes16(paymasterAndData[12:28]));
-        paymasterData.allowAnyBundler = paymasterAndData[28] > 0;
-        paymasterData.precheckBalance = paymasterAndData[29] > 0;
-        paymasterData.prepaymentRequired = paymasterAndData[30] > 0;
+        paymasterData.allowAnyBundler = paymasterAndData[28] != 0;
+        paymasterData.precheckBalance = paymasterAndData[29] != 0;
+        paymasterData.prepaymentRequired = paymasterAndData[30] != 0;
         paymasterData.token = address(bytes20(paymasterAndData[31:51]));
         paymasterData.receiver = address(bytes20(paymasterAndData[51:71]));
         paymasterData.exchangeRate = uint256(bytes32(paymasterAndData[71:103]));
@@ -347,7 +347,7 @@ contract VerifyingPaymaster is BasePaymaster, Ownable2Step {
                 }
             } else {
                 uint256 refund = c.prepaidAmount - actualTokenCost;
-                if (refund > 0) {
+                if (refund != 0) {
                     SafeTransferLib.safeTransfer(c.token, c.sender, refund);
                 }
                 SafeTransferLib.safeTransfer(c.token, c.receiver, actualTokenCost);
