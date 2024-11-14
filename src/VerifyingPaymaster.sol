@@ -346,12 +346,16 @@ contract VerifyingPaymaster is BasePaymaster, Ownable2Step {
                     emit UserOperationSponsored(c.userOpHash, c.sponsorUUID, c.token);
                 }
             } else {
-                uint256 refund = c.prepaidAmount - actualTokenCost;
-                if (refund != 0) {
-                    SafeTransferLib.safeTransfer(c.token, c.sender, refund);
+                // Is prepaid, refund sender difference and transfer to receiver                
+                try SafeTransferLib.safeTransfer(c.token, c.receiver, actualTokenCost) {
+                    uint256 refund = c.prepaidAmount - actualTokenCost;
+                    if (refund != 0) {
+                        try SafeTransferLib.safeTransfer(c.token, c.sender, refund) {} catch {}
+                    }
+                    emit UserOperationSponsoredWithERC20(c.userOpHash, c.sponsorUUID, c.token, c.receiver, actualTokenCost);
+                } catch {
+                   emit UserOperationSponsored(c.userOpHash, c.sponsorUUID, c.token);
                 }
-                SafeTransferLib.safeTransfer(c.token, c.receiver, actualTokenCost);
-                emit UserOperationSponsoredWithERC20(c.userOpHash, c.sponsorUUID, c.token, c.receiver, actualTokenCost);
             }
         } else {
             emit UserOperationSponsored(c.userOpHash, c.sponsorUUID, c.token);
