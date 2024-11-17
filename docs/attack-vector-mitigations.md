@@ -10,9 +10,13 @@ Malicious actors could find a paymaster that sponsors UserOps and submit UserOps
 Since Coinbase provides free credits on Coinbase Developer Platform (CDP) as well, this would give malicious users a way to extract value from the paymaster. 
 
 ### Mitigation
-We've implemented a flag (`allowAnyBundler`) in the `PaymasterData` struct to optionally restrict UserOps to only allowlisted bundlers. When this flag is set to false, the `_postOp` function checks if the bundler (`tx.origin`) is in the allowlist. If not, it reverts with a `BundlerNotAllowed` error. This ensures that only trusted bundlers can submit UserOps to our paymaster when the restriction is enabled.
+We've implemented a flag (`allowAnyBundler`) in the `PaymasterData` struct to optionally restrict UserOps to only allowlisted bundlers. When this flag is set to false, the `_validatePaymasterUserOp` function checks if the bundler (`tx.origin`) is in the allowlist. If not, it reverts with a `BundlerNotAllowed` error. This ensures that only trusted bundlers can submit UserOps to our paymaster when the restriction is enabled.
 
 On Coinbase's paymaster, Coinbase Developer Platform and other major providers bundler addresses are allowlisted.
+
+Note that this breaks 4337 opcode rule for ORIGIN - if using this contract with allowAnyBundler = false then you have to skip the ORIGIN opcode check for this paymaster address.
+
+Note that when the `allowAnyBundler` flag is set to false, and your bundler has allowed the Paymaster to bypass the opcode check, the userOp should not be propagated to any non-private mempools as it will be considered invalid and may result in your p2p sender to the mempool being marked as a spammer.
 
 ## 2. ERC20 Asset Changes Result in Sender Unable to Pay
 
