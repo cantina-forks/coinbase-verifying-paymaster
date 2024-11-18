@@ -10,8 +10,7 @@ import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {FixedPointMathLib} from "@solady/utils/FixedPointMathLib.sol";
-
-import {ERC20} from "@solmate/tokens/ERC20.sol";
+import {ERC20} from "@solady/tokens/ERC20.sol";
 import {SafeTransferLib} from "@solady/utils/SafeTransferLib.sol";
 
 /// @title VerifyingPaymaster
@@ -346,18 +345,15 @@ contract VerifyingPaymaster is BasePaymaster, Ownable2Step {
                     emit UserOperationSponsored(c.userOpHash, c.sponsorUUID, c.token);
                 }
             } else {
-                // Is prepaid, transfer to receiver and refund difference. Try catch block used in case token is non standard                 
-                try ERC20(c.token).transfer(c.receiver, actualTokenCost) returns (bool success) {
-                    if (success) {
-                        uint256 refund = c.prepaidAmount - actualTokenCost;
-                        if (refund != 0) {
-                            try ERC20(c.token).transfer(c.sender, refund) {} catch {}
-                        }
-                        emit UserOperationSponsoredWithERC20(c.userOpHash, c.sponsorUUID, c.token, c.receiver, actualTokenCost);
-                    } else {
-                        emit UserOperationSponsored(c.userOpHash, c.sponsorUUID, c.token);
+                // Is prepaid, transfer to receiver and refund difference                
+                bool success = _trySafeTransfer(c.token, c.receiver, actualTokenCost);
+                if (success) {
+                    uint256 refund = c.prepaidAmount - actualTokenCost;
+                    if (refund != 0) {
+                        _trySafeTransfer(c.token, c.sender, refund);
                     }
-                } catch {
+                    emit UserOperationSponsoredWithERC20(c.userOpHash, c.sponsorUUID, c.token, c.receiver, actualTokenCost);
+                } else {
                    emit UserOperationSponsored(c.userOpHash, c.sponsorUUID, c.token);
                 }
             }
@@ -382,5 +378,22 @@ contract VerifyingPaymaster is BasePaymaster, Ownable2Step {
     function _calculateTokenCost(uint256 gasCost, uint256 tokenExchangeRate) internal pure returns (uint256) {
         // Use mul div up so min amount is 1
         return FixedPointMathLib.mulDivUp(gasCost, tokenExchangeRate, 1e18);
+    }
+
+    /// @notice Attempts to transfer `amount` of ERC20 `token` to `to`. 
+    ///
+    /// @param token token address
+    /// @param to to address
+    /// @param amount token amount
+    ///
+    /// @return bool `true` if successful
+    function _trySafeTransfer(address token, address to, uint256 amount)
+    internal
+    returns (bool)
+    {
+        (bool success, bytes memory returnData) = token.call(
+            abi.encodeWithSelector(ERC20.transfer.selector, to, amount)
+        );
+        return success && (returnData.length == 0 || abi.decode(returnData, (bool)));
     }
 }
