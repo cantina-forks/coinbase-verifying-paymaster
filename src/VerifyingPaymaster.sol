@@ -347,12 +347,16 @@ contract VerifyingPaymaster is BasePaymaster, Ownable2Step {
                 }
             } else {
                 // Is prepaid, transfer to receiver and refund difference. Try catch block used in case token is non standard                 
-                try ERC20(c.token).transfer(c.receiver, actualTokenCost) {
-                    uint256 refund = c.prepaidAmount - actualTokenCost;
-                    if (refund != 0) {
-                        try ERC20(c.token).transfer(c.sender, refund) {} catch {}
+                try ERC20(c.token).transfer(c.receiver, actualTokenCost) returns (bool success) {
+                    if (success) {
+                        uint256 refund = c.prepaidAmount - actualTokenCost;
+                        if (refund != 0) {
+                            try ERC20(c.token).transfer(c.sender, refund) {} catch {}
+                        }
+                        emit UserOperationSponsoredWithERC20(c.userOpHash, c.sponsorUUID, c.token, c.receiver, actualTokenCost);
+                    } else {
+                        emit UserOperationSponsored(c.userOpHash, c.sponsorUUID, c.token);
                     }
-                    emit UserOperationSponsoredWithERC20(c.userOpHash, c.sponsorUUID, c.token, c.receiver, actualTokenCost);
                 } catch {
                    emit UserOperationSponsored(c.userOpHash, c.sponsorUUID, c.token);
                 }
