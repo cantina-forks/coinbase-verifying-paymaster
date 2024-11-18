@@ -345,13 +345,19 @@ contract VerifyingPaymaster is BasePaymaster, Ownable2Step {
                     emit UserOperationSponsored(c.userOpHash, c.sponsorUUID, c.token);
                 }
             } else {
-                // Is prepaid, transfer to receiver and refund difference                
-                bool success = _trySafeTransfer(c.token, c.receiver, actualTokenCost);
+                // Is prepaid attempt to refund difference   
+                uint256 refund = c.prepaidAmount - actualTokenCost;
+                bool success = true;
+                if (refund != 0) {
+                    success = success && _trySafeTransfer(c.token, c.sender, refund);
+                }
+
+                // Attempt to pay receiver
                 if (success) {
-                    uint256 refund = c.prepaidAmount - actualTokenCost;
-                    if (refund != 0) {
-                        _trySafeTransfer(c.token, c.sender, refund);
-                    }
+                     success = success && _trySafeTransfer(c.token, c.receiver, actualTokenCost);
+                }
+
+                if (success) {
                     emit UserOperationSponsoredWithERC20(c.userOpHash, c.sponsorUUID, c.token, c.receiver, actualTokenCost);
                 } else {
                    emit UserOperationSponsored(c.userOpHash, c.sponsorUUID, c.token);
