@@ -31,7 +31,7 @@ contract VerifyingPaymaster is BasePaymaster, Ownable2Step {
         uint48 validAfter;
         /// @dev Sponsor uuid for offchain tracking
         uint128 sponsorUUID;
-        /// @dev Flag to reject userOp in postOp if submitted by unallowlisted bundler
+        /// @dev Flag to reject userOp in validation if submitted by unallowlisted bundler
         bool allowAnyBundler;
         /// @dev Flag to check sender token balance in validation phase
         bool precheckBalance;
